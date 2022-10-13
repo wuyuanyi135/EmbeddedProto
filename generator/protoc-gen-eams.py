@@ -285,6 +285,9 @@ def main_cli():
 
 
 if __name__ == '__main__':
+    import pydevd_pycharm
+
+    pydevd_pycharm.settrace('localhost', port=3210, stdoutToServer=True, stderrToServer=True)
     # Check if we are running as a plugin under protoc
     if '--protoc-plugin' in sys.argv:
         main_plugin()

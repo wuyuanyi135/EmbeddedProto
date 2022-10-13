@@ -255,6 +255,7 @@ class BaseStringBytes(Field):
 
         # Find options we know and use in this type of field.
         self.MaxLength = None
+        self.Dynamic = None
         try:
             import embedded_proto_options_pb2
         except Exception as e:
@@ -262,6 +263,7 @@ class BaseStringBytes(Field):
         else:
             if self.descriptor.options.HasExtension(embedded_proto_options_pb2.options):
                 self.MaxLength = self.descriptor.options.Extensions[embedded_proto_options_pb2.options].maxLength
+                self.Dynamic = self.descriptor.options.Extensions[embedded_proto_options_pb2.options].dynamic
 
     def get_wire_type_str(self):
         return "LENGTH_DELIMITED"
@@ -269,13 +271,13 @@ class BaseStringBytes(Field):
     def get_template_parameters(self):
         result = []
         # When we do not have a maximum length specified add the length as a template param.
-        if not self.MaxLength:
+        if not self.MaxLength and not self.Dynamic:
             result.append({"name": self.template_param_str, "type": "uint32_t"})
         return result
 
     def register_template_parameters(self):
         # If we do not have a max length defined register the template parameter.
-        if not self.MaxLength:
+        if not self.MaxLength and not self.Dynamic:
             self.parent.register_child_with_template(self)
         return True
 
@@ -295,6 +297,10 @@ class FieldString(BaseStringBytes):
         super().__init__(proto_descriptor, parent_msg, oneof)
 
     def get_type(self):
+        if self.Dynamic:
+            str_type = "::EmbeddedProto::FieldStringDynamic"
+            return str_type
+
         str_type = "::EmbeddedProto::FieldString<"
         if self.MaxLength:
             str_type += str(self.MaxLength) + ">"
@@ -317,6 +323,10 @@ class FieldBytes(BaseStringBytes):
         super().__init__(proto_descriptor, parent_msg, oneof)
 
     def get_type(self):
+        if self.Dynamic:
+            str_type = "::EmbeddedProto::FieldBytesDynamic"
+            return str_type
+
         str_type = "::EmbeddedProto::FieldBytes<"
         if self.MaxLength:
             str_type += str(self.MaxLength) + ">"

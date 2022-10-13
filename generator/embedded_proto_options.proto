@@ -6,6 +6,7 @@ package EmbeddedProto;
 
 message Options {
   uint32 maxLength = 1;
+  bool dynamic = 2;
 }
 
 extend google.protobuf.FieldOptions { 

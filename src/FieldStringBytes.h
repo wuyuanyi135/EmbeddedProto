@@ -49,74 +49,127 @@ namespace EmbeddedProto
 
     class BaseStringBytes : public Field {};
 
-    template<uint32_t MAX_LENGTH, class DATA_TYPE>
-    class FieldStringBytes : public BaseStringBytes
-    {
-      static_assert(std::is_same<uint8_t, DATA_TYPE>::value || std::is_same<char, DATA_TYPE>::value, 
-                    "This class only supports unit8_t or chars.");
+    /// Data container independent base class of string and bytes fields
+    template<class DATA_TYPE>
+    class BaseFieldStringBytes : public BaseStringBytes {
+      static_assert(std::is_same<uint8_t, DATA_TYPE>::value || std::is_same<char, DATA_TYPE>::value,
+          "This class only supports unit8_t or chars.");
+    public:
 
+      BaseFieldStringBytes() = default;
+
+      ~BaseFieldStringBytes() override = default;
+      //! Obtain the number of characters in the string right now.
+      virtual uint32_t get_length() const = 0;
+
+      //! Obtain the maximum number characters in the string.
+      virtual uint32_t get_max_length() const = 0;
+
+      //! Get a constant pointer to the first element in the array.
+      virtual const DATA_TYPE* get_const() const = 0;
+
+      //! Get a reference to the value at the given index.
+      /*!
+        This function will update the number of elements used in the array/string.
+
+        \param[in] index The desired index to return.
+        \return The reference to the value at the given index. Will return the last element if the
+                index is out of bounds
+      */
+      virtual DATA_TYPE& get(uint32_t index) = 0;
+
+      //! Get a constant reference to the value at the given index.
+      /*!
+        \param[in] index The desired index to return.
+        \return The reference to the value at the given index. Will return the last element if the
+                index is out of bounds
+      */
+      virtual const DATA_TYPE& get_const(uint32_t index) const = 0;
+
+      //! Get a reference to the value at the given index.
+      /*!
+        This function will update the number of elements used in the array/string.
+
+        \param[in] index The desired index to return.
+        \return The reference to the value at the given index. Will return the last element if the
+                index is out of bounds
+      */
+      virtual DATA_TYPE& operator[](uint32_t index) = 0;
+
+      //! Get a constant reference to the value at the given index.
+      /*!
+        \param[in] index The desired index to return.
+        \return The reference to the value at the given index. Will return the last element if the
+                index is out of bounds
+      */
+      virtual const DATA_TYPE& operator[](uint32_t index) const = 0;
+
+    };
+
+    template<uint32_t MAX_LENGTH, class DATA_TYPE>
+    class FieldStringBytes : public BaseFieldStringBytes<DATA_TYPE>{
       public:
 
         FieldStringBytes() = default;
-        
+
         ~FieldStringBytes() override = default;
-        
+
         //! Obtain the number of characters in the string right now.
-        uint32_t get_length() const { return current_length_; }
+        uint32_t get_length() const override { return current_length_; }
 
         //! Obtain the maximum number characters in the string.
-        uint32_t get_max_length() const { return MAX_LENGTH; }
+        uint32_t get_max_length() const override { return MAX_LENGTH; }
 
         //! Get a constant pointer to the first element in the array.
-        const DATA_TYPE* get_const() const { return data_.data(); }
+        const DATA_TYPE* get_const() const override { return data_.data(); }
 
-        //! Get a reference to the value at the given index. 
+        //! Get a reference to the value at the given index.
         /*!
           This function will update the number of elements used in the array/string.
 
           \param[in] index The desired index to return.
-          \return The reference to the value at the given index. Will return the last element if the 
+          \return The reference to the value at the given index. Will return the last element if the
                   index is out of bounds
         */
-        DATA_TYPE& get(uint32_t index) 
-        { 
+        DATA_TYPE& get(uint32_t index) override
+        {
           uint32_t limited_index = std::min(index, MAX_LENGTH-1);
           // Check if we need to update the number of elements in the array.
           if(limited_index >= current_length_) {
             current_length_ = limited_index + 1;
           }
-          return data_[limited_index]; 
+          return data_[limited_index];
         }
 
-        //! Get a constant reference to the value at the given index. 
+        //! Get a constant reference to the value at the given index.
         /*!
           \param[in] index The desired index to return.
-          \return The reference to the value at the given index. Will return the last element if the 
+          \return The reference to the value at the given index. Will return the last element if the
                   index is out of bounds
         */
-        const DATA_TYPE& get_const(uint32_t index) const 
-        { 
+        const DATA_TYPE& get_const(uint32_t index) const override
+        {
           uint32_t limited_index = std::min(index, MAX_LENGTH-1);
-          return data_[limited_index]; 
+          return data_[limited_index];
         }
 
-        //! Get a reference to the value at the given index. 
+        //! Get a reference to the value at the given index.
         /*!
           This function will update the number of elements used in the array/string.
 
           \param[in] index The desired index to return.
-          \return The reference to the value at the given index. Will return the last element if the 
+          \return The reference to the value at the given index. Will return the last element if the
                   index is out of bounds
         */
-        DATA_TYPE& operator[](uint32_t index) { return this->get(index); }
+        DATA_TYPE& operator[](uint32_t index) override { return this->get(index); }
 
-        //! Get a constant reference to the value at the given index. 
+        //! Get a constant reference to the value at the given index.
         /*!
           \param[in] index The desired index to return.
-          \return The reference to the value at the given index. Will return the last element if the 
+          \return The reference to the value at the given index. Will return the last element if the
                   index is out of bounds
         */
-        const DATA_TYPE& operator[](uint32_t index) const { return this->get_const(index); }
+        const DATA_TYPE& operator[](uint32_t index) const override { return this->get_const(index); }
 
 
         //! Assign the values in the right hand side FieldStringBytes object to this object.
@@ -125,7 +178,7 @@ namespace EmbeddedProto
             \param[in] rhs The object from which to copy the data.
             \return A reference to this object.
         */
-        FieldStringBytes<MAX_LENGTH, DATA_TYPE>& operator=(const FieldStringBytes<MAX_LENGTH, DATA_TYPE>& rhs)
+        FieldStringBytes<MAX_LENGTH, DATA_TYPE>& operator= (const FieldStringBytes<MAX_LENGTH, DATA_TYPE>& rhs)
         {
           this->set(rhs);
           return *this;
@@ -144,13 +197,13 @@ namespace EmbeddedProto
           return Error::NO_ERRORS;
         }
 
-        
+
         //! Assign data in the given array to this object.
         /*!
             \param[in] data A pointer to an array with data.
             \param[in] length The number of bytes/chars in the data array.
             \return Will return ARRAY_FULL when length exceeds the number of bytes/chars in this object.
-        */        
+        */
         Error set(const DATA_TYPE* data, const uint32_t length)
         {
           Error return_value = Error::NO_ERRORS;
@@ -167,29 +220,29 @@ namespace EmbeddedProto
         }
 
 
-        Error serialize_with_id(uint32_t field_number, WriteBufferInterface& buffer, const bool optional) const override 
+        Error serialize_with_id(uint32_t field_number, WriteBufferInterface& buffer, const bool optional) const override
         {
           Error return_value = Error::NO_ERRORS;
 
-          if((0 < current_length_) || optional) 
+          if((0 < current_length_) || optional)
           {
             const auto n_bytes_available = buffer.get_available_size();
             if(current_length_ <= n_bytes_available)
             {
-              uint32_t tag = WireFormatter::MakeTag(field_number, 
+              uint32_t tag = WireFormatter::MakeTag(field_number,
                                                     WireFormatter::WireType::LENGTH_DELIMITED);
               return_value = WireFormatter::SerializeVarint(tag, buffer);
-              if(Error::NO_ERRORS == return_value) 
+              if(Error::NO_ERRORS == return_value)
               {
                 return_value = WireFormatter::SerializeVarint(current_length_, buffer);
               }
               // Check check the number of elements again for optional fields.
-              if((Error::NO_ERRORS == return_value) && (0 < current_length_)) 
+              if((Error::NO_ERRORS == return_value) && (0 < current_length_))
               {
                 return_value = serialize(buffer);
               }
             }
-            else 
+            else
             {
               return_value = Error::BUFFER_FULL;
             }
@@ -198,8 +251,8 @@ namespace EmbeddedProto
           return return_value;
         }
 
-        Error serialize(WriteBufferInterface& buffer) const override 
-        { 
+        Error serialize(WriteBufferInterface& buffer) const override
+        {
           Error return_value = Error::NO_ERRORS;
           const auto* void_pointer = static_cast<const void*>(&(data_[0]));
           const auto* byte_pointer = static_cast<const uint8_t*>(void_pointer);
@@ -210,18 +263,18 @@ namespace EmbeddedProto
           return return_value;
         }
 
-        Error deserialize(ReadBufferInterface& buffer) override 
+        Error deserialize(ReadBufferInterface& buffer) override
         {
           uint32_t availiable = 0;
           Error return_value = WireFormatter::DeserializeVarint(buffer, availiable);
           if(Error::NO_ERRORS == return_value)
           {
-            if(MAX_LENGTH >= availiable) 
+            if(MAX_LENGTH >= availiable)
             {
               clear();
 
               uint8_t byte = 0;
-              while((current_length_ < availiable) && buffer.pop(byte)) 
+              while((current_length_ < availiable) && buffer.pop(byte))
               {
                 (data_[current_length_]) = static_cast<DATA_TYPE>(byte);
                 ++current_length_;
@@ -233,7 +286,7 @@ namespace EmbeddedProto
                 return_value = Error::END_OF_BUFFER;
               }
             }
-            else 
+            else
             {
               return_value = Error::ARRAY_FULL;
             }
@@ -241,13 +294,13 @@ namespace EmbeddedProto
 
           return return_value;
         }
-        
-        Error deserialize_check_type(::EmbeddedProto::ReadBufferInterface& buffer, 
+
+        Error deserialize_check_type(::EmbeddedProto::ReadBufferInterface& buffer,
                                      const ::EmbeddedProto::WireFormatter::WireType& wire_type) final
         {
-          Error return_value = ::EmbeddedProto::WireFormatter::WireType::LENGTH_DELIMITED == wire_type 
+          Error return_value = ::EmbeddedProto::WireFormatter::WireType::LENGTH_DELIMITED == wire_type
                                ? Error::NO_ERRORS : Error::INVALID_WIRETYPE;
-          if(Error::NO_ERRORS == return_value)  
+          if(Error::NO_ERRORS == return_value)
           {
             return_value = this->deserialize(buffer);
           }
@@ -255,12 +308,12 @@ namespace EmbeddedProto
         }
 
         //! Reset the field to it's initial value.
-        void clear() override 
-        { 
+        void clear() override
+        {
           data_.fill(0);
-          current_length_ = 0; 
+          current_length_ = 0;
         }
-    
+
       protected:
 
         //! Set the current number of items in the array. Only for internal usage.
@@ -281,6 +334,155 @@ namespace EmbeddedProto
         std::array<DATA_TYPE, MAX_LENGTH> data_ = {{0}};
 
     }; // End of class FieldStringBytes
+
+    template <typename DATA_TYPE>
+    class FieldStringBytesDynamic : public BaseFieldStringBytes<DATA_TYPE> {
+    public:
+        FieldStringBytesDynamic() = default;
+
+        ~FieldStringBytesDynamic() override = default;
+
+        uint32_t get_length() const override { return data_.size(); }
+
+        uint32_t get_max_length() const override { return -1; }
+
+        const DATA_TYPE* get_const() const override { return data_.data(); }
+
+
+        DATA_TYPE& get(uint32_t index) override
+        {
+          uint32_t limited_index = std::min(index, data_.size()-1);
+          return data_[limited_index];
+        }
+
+        //! Get a constant reference to the value at the given index.
+        /*!
+          \param[in] index The desired index to return.
+          \return The reference to the value at the given index. Will return the last element if the
+                  index is out of bounds
+        */
+        const DATA_TYPE& get_const(uint32_t index) const override
+        {
+          uint32_t limited_index = std::min(index, data_.size()-1);
+          return data_[limited_index];
+        }
+
+        //! Get a reference to the value at the given index.
+        /*!
+          This function will update the number of elements used in the array/string.
+
+          \param[in] index The desired index to return.
+          \return The reference to the value at the given index. Will return the last element if the
+                  index is out of bounds
+        */
+        DATA_TYPE& operator[](uint32_t index) override { return this->get(index); }
+
+        const DATA_TYPE& operator[](uint32_t index) const override { return this->get_const(index); }
+
+        FieldStringBytesDynamic<DATA_TYPE>& operator= (const FieldStringBytesDynamic<DATA_TYPE>& rhs)
+        {
+          this->set(rhs);
+          return *this;
+        }
+
+        Error set(const FieldStringBytesDynamic<DATA_TYPE>& rhs)
+        {
+          return set(rhs.get_const(), rhs.get_length());
+        }
+
+        Error set(const DATA_TYPE* data, const uint32_t length)
+        {
+          Error return_value = Error::NO_ERRORS;
+          data_.assign(data, data+length);
+          return return_value;
+        }
+
+
+        Error serialize_with_id(uint32_t field_number, WriteBufferInterface& buffer, const bool optional) const override
+        {
+          Error return_value = Error::NO_ERRORS;
+
+          if((!data_.empty()) || optional)
+          {
+            const auto n_bytes_available = buffer.get_available_size();
+            if(data_.size() <= n_bytes_available)
+            {
+              uint32_t tag = WireFormatter::MakeTag(field_number,
+                                                    WireFormatter::WireType::LENGTH_DELIMITED);
+              return_value = WireFormatter::SerializeVarint(tag, buffer);
+              if(Error::NO_ERRORS == return_value)
+              {
+                return_value = WireFormatter::SerializeVarint(data_.size(), buffer);
+              }
+              // Check check the number of elements again for optional fields.
+              if((Error::NO_ERRORS == return_value) && (!data_.empty()))
+              {
+                return_value = serialize(buffer);
+              }
+            }
+            else
+            {
+              return_value = Error::BUFFER_FULL;
+            }
+          }
+
+          return return_value;
+        }
+
+        Error serialize(WriteBufferInterface& buffer) const override
+        {
+          Error return_value = Error::NO_ERRORS;
+          const auto* void_pointer = static_cast<const void*>(&(data_[0]));
+          const auto* byte_pointer = static_cast<const uint8_t*>(void_pointer);
+          if(!buffer.push(byte_pointer, data_.size()))
+          {
+            return_value = Error::BUFFER_FULL;
+          }
+          return return_value;
+        }
+
+        Error deserialize(ReadBufferInterface& buffer) override
+        {
+          uint32_t availiable = 0;
+          Error return_value = WireFormatter::DeserializeVarint(buffer, availiable);
+          if(Error::NO_ERRORS == return_value)
+          {
+            data_.resize(availiable);
+            uint8_t byte = 0;
+            for (int i = 0; i < availiable && buffer.pop(byte); ++i) {
+              (data_[i]) = static_cast<DATA_TYPE>(byte);
+            }
+          }
+
+          return return_value;
+        }
+
+        Error deserialize_check_type(::EmbeddedProto::ReadBufferInterface& buffer,
+                                     const ::EmbeddedProto::WireFormatter::WireType& wire_type) final
+        {
+          Error return_value = ::EmbeddedProto::WireFormatter::WireType::LENGTH_DELIMITED == wire_type
+                               ? Error::NO_ERRORS : Error::INVALID_WIRETYPE;
+          if(Error::NO_ERRORS == return_value)
+          {
+            return_value = this->deserialize(buffer);
+          }
+          return return_value;
+        }
+
+        //! Reset the field to it's initial value.
+        void clear() override
+        {
+          data_.clear();
+        }
+
+    protected:
+        void set_length(uint32_t length) { data_.resize(length); }
+
+        DATA_TYPE* get() { return data_.data(); }
+
+    public:
+        std::vector<DATA_TYPE> data_ = {{0}};
+    };
 
   } // End of namespace internal
 
@@ -317,9 +519,34 @@ namespace EmbeddedProto
   {
     public:
       FieldBytes() = default;
-      ~FieldBytes() override = default; 
+      ~FieldBytes() override = default;
   };
 
+  class FieldStringDynamic : public internal::FieldStringBytesDynamic<char> {
+  public:
+    FieldStringDynamic() = default;
+    ~FieldStringDynamic() override = default;
+
+    FieldStringDynamic& operator=(const char* const &&rhs)
+    {
+      if(nullptr != rhs) {
+        const uint32_t rhs_MAX_LENGTH = strlen(rhs);
+        this->set(rhs, rhs_MAX_LENGTH + 1);
+      }
+      else {
+        this->clear();
+      }
+      return *this;
+    }
+  };
+
+  template<uint32_t MAX_LENGTH>
+  class FieldByteDynamic : public internal::FieldStringBytesDynamic<uint8_t>
+  {
+    public:
+      FieldByteDynamic() = default;
+      ~FieldByteDynamic() override = default;
+  };
 
 } // End of namespace EmbeddedProto
 

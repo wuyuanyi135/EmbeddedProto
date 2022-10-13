@@ -1,0 +1,6 @@
+syntax = "proto3";
+import "embedded_proto_options.proto";
+
+message Test {
+  string dynamic_str = 1 [(EmbeddedProto.options).dynamic = true];
+}
